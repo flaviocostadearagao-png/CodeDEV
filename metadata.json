@@ -1,0 +1,6 @@
+{
+  "name": "DevDoZero - Plataforma EdTech",
+  "description": "Especificação técnica, arquitetura e protótipo funcional da plataforma DevDoZero com editor de código, validação de testes e trilhas do zero ao avançado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
