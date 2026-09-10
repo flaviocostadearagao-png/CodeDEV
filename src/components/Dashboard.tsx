@@ -14,6 +14,8 @@ import {
   Cpu,
   BookOpen,
   Filter,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
 import { Track, Lesson, UserStats, DifficultyLevel, Language } from '../types';
 
@@ -25,7 +27,19 @@ interface DashboardProps {
   onSelectTrack: (track: Track) => void;
   onStartLesson: (lessonId: string) => void;
   onOpenArchitecture: () => void;
+  onResetStats?: () => void;
 }
+
+const getTrackAbbr = (id: string, name: string) => {
+  if (id === 'html') return 'HTML';
+  if (id === 'css') return 'CSS';
+  if (id === 'javascript') return 'JS';
+  if (id === 'typescript') return 'TS';
+  if (id === 'python') return 'PY';
+  if (id === 'java') return 'JAVA';
+  if (id === 'csharp') return 'C#';
+  return name.slice(0, 3).toUpperCase();
+};
 
 export const Dashboard: React.FC<DashboardProps> = ({
   tracks,
@@ -35,8 +49,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onSelectTrack,
   onStartLesson,
   onOpenArchitecture,
+  onResetStats,
 }) => {
   const [selectedLevelFilter, setSelectedLevelFilter] = useState<DifficultyLevel | 'all'>('all');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Filter lessons for the active track and optional level filter
   const trackLessons = lessons.filter((l) => l.trackId === activeTrack.id);
@@ -105,8 +121,46 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Cpu className="w-4 h-4 text-indigo-400" />
               <span>Arquitetura do Sistema</span>
             </button>
+
+            {onResetStats && (
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                title="Zerar todas as estatísticas e progresso para começar do zero"
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-3 rounded-xl bg-slate-900/80 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 font-medium text-xs border border-slate-800 hover:border-rose-900/60 transition-colors min-h-[42px]"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Zerar Estatísticas</span>
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Reset Confirmation Dialog */}
+        {showResetConfirm && (
+          <div className="mt-4 p-4 rounded-xl bg-rose-950/40 border border-rose-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-rose-300">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>Deseja realmente zerar todo o progresso, XP e estatísticas acumuladas?</span>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  onResetStats?.();
+                  setShowResetConfirm(false);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold"
+              >
+                Confirmar Zerar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Global Progress Metric Bars */}
         <div className="mt-6 pt-5 border-t border-slate-800/80 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -191,12 +245,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
               Trilhas de Aprendizado Disponíveis
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Escolha entre as 5 linguagens principais do mercado: do zero ao domínio enterprise.
+              Escolha entre as 7 trilhas completas: do HTML, CSS e JavaScript essenciais até TypeScript, Python, Java e C#.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-2.5 sm:gap-3">
           {tracks.map((track) => {
             const isSelected = track.id === activeTrack.id;
             return (
@@ -212,10 +266,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
                     <div
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow shrink-0"
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-white font-bold text-[11px] sm:text-xs shadow shrink-0 tracking-tight"
                       style={{ backgroundColor: track.accentColor }}
                     >
-                      {track.name.slice(0, 2).toUpperCase()}
+                      {getTrackAbbr(track.id, track.name)}
                     </div>
                     {isSelected && (
                       <span className="text-[9px] sm:text-[10px] uppercase font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">

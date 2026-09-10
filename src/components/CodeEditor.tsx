@@ -111,10 +111,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
           <span className="ml-1 sm:ml-2 font-semibold text-slate-300 uppercase tracking-wider text-[11px] sm:text-xs">
-            main.{language === 'python' ? 'py' : language === 'javascript' ? 'js' : language === 'typescript' ? 'ts' : language === 'java' ? 'java' : 'cs'}
+            {language === 'html' ? 'index.html' : language === 'css' ? 'styles.css' : language === 'javascript' ? 'index.js' : language === 'typescript' ? 'main.ts' : language === 'python' ? 'main.py' : language === 'java' ? 'Main.java' : 'Program.cs'}
           </span>
           <span className="text-[10px] text-slate-500 px-1.5 py-0.5 rounded bg-slate-800/80 hidden sm:inline">
             UTF-8
+          </span>
+          <span
+            title="Seu código é salvo automaticamente em segundo plano"
+            className="text-[10px] text-emerald-400/90 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 hidden md:inline-flex items-center gap-1"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Autosalvamento ativo
           </span>
         </div>
 

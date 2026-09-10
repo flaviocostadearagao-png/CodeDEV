@@ -2,14 +2,15 @@ import { Lesson, ExecutionResult, TestResultItem } from '../types';
 
 export async function runCode(code: string, lesson: Lesson): Promise<ExecutionResult> {
   const startTime = performance.now();
-  const stdoutLines: string[] = [];
-  const stderrLines: string[] = [];
-  const testResults: TestResultItem[] = [];
 
   // Simulate network & sandbox init latency (for realism and visual responsiveness)
-  await new Promise((resolve) => setTimeout(resolve, 350));
+  await new Promise((resolve) => setTimeout(resolve, 280));
 
-  if (lesson.trackId === 'javascript' || lesson.trackId === 'typescript') {
+  if (lesson.trackId === 'html') {
+    return executeHtmlTest(code, lesson, startTime);
+  } else if (lesson.trackId === 'css') {
+    return executeCssTest(code, lesson, startTime);
+  } else if (lesson.trackId === 'javascript' || lesson.trackId === 'typescript') {
     return executeJavaScriptOrTypeScript(code, lesson, startTime);
   } else if (lesson.trackId === 'python') {
     return executePythonSimulation(code, lesson, startTime);
@@ -19,6 +20,222 @@ export async function runCode(code: string, lesson: Lesson): Promise<ExecutionRe
     // csharp
     return executeCSharpSimulation(code, lesson, startTime);
   }
+}
+
+function executeHtmlTest(
+  code: string,
+  lesson: Lesson,
+  startTime: number
+): ExecutionResult {
+  const stdoutLines: string[] = [];
+  const stderrLines: string[] = [];
+  const testResults: TestResultItem[] = [];
+
+  stdoutLines.push('[HTML Parser] Inicializando analisador DOM (HTML5 W3C Specification)...');
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(code, 'text/html');
+
+  const parserError = doc.querySelector('parsererror');
+  if (parserError) {
+    stderrLines.push(`[HTML Linter] Aviso de parsing: ${parserError.textContent}`);
+  } else {
+    stdoutLines.push('[HTML Parser] Árvore DOM construída com êxito sem erros fatais.');
+  }
+
+  // Detect student tags
+  const allElements = Array.from(doc.querySelectorAll('*')).map((el) => el.tagName.toLowerCase());
+  const uniqueTags = Array.from(new Set(allElements)).filter((t) => !['html', 'head', 'body'].includes(t));
+  if (uniqueTags.length > 0) {
+    stdoutLines.push(`[Tags Detectadas] <${uniqueTags.slice(0, 10).join('>, <')}>`);
+  }
+
+  for (const tc of lesson.testCases) {
+    const tStart = performance.now();
+    let passed = false;
+    let actualOutput = '';
+
+    try {
+      if (tc.input.startsWith('selector:')) {
+        const selector = tc.input.replace('selector:', '').trim();
+        const el = doc.querySelector(selector);
+        if (el) {
+          passed = true;
+          actualOutput = `<${el.tagName.toLowerCase()}> encontrado`;
+        } else {
+          passed = false;
+          actualOutput = `Seletor '${selector}' não localizado`;
+        }
+      } else if (tc.input.startsWith('has-text:')) {
+        const parts = tc.input.split(':');
+        const selector = parts[1];
+        const expectedText = parts.slice(2).join(':');
+        const el = doc.querySelector(selector);
+        const text = el?.textContent?.trim() || '';
+        if (el && text.toLowerCase().includes(expectedText.toLowerCase())) {
+          passed = true;
+          actualOutput = `Texto '${text}' contém '${expectedText}'`;
+        } else {
+          passed = false;
+          actualOutput = el ? `Texto atual: '${text}'` : `Elemento '${selector}' ausente`;
+        }
+      } else if (tc.input.startsWith('count:')) {
+        const match = tc.input.replace('count:', '').trim().match(/^([a-zA-Z0-9_\-\.]+)\s*(>=|<=|===|==|>|<)\s*(\d+)$/);
+        if (match) {
+          const [, sel, op, countStr] = match;
+          const count = parseInt(countStr, 10);
+          const found = doc.querySelectorAll(sel).length;
+          if (op === '>=' && found >= count) passed = true;
+          else if (op === '>' && found > count) passed = true;
+          else if (op === '<=' && found <= count) passed = true;
+          else if (op === '<' && found < count) passed = true;
+          else if ((op === '==' || op === '===') && found === count) passed = true;
+          actualOutput = `${found} elemento(s) '${sel}' encontrado(s)`;
+        } else {
+          passed = false;
+          actualOutput = 'Critério de contagem inválido';
+        }
+      } else if (tc.input.startsWith('attr:')) {
+        const selector = tc.input.replace('attr:', '').trim();
+        const el = doc.querySelector(selector);
+        if (el) {
+          passed = true;
+          actualOutput = `Atributo validado em <${el.tagName.toLowerCase()}>`;
+        } else {
+          passed = false;
+          actualOutput = `Elemento com atributo '${selector}' não encontrado`;
+        }
+      } else if (tc.input.startsWith('doctype:')) {
+        passed = /<!DOCTYPE\s+html>/i.test(code);
+        actualOutput = passed ? '<!DOCTYPE html> declarado' : '<!DOCTYPE html> ausente';
+      } else if (tc.input.startsWith('regex:')) {
+        const pattern = new RegExp(tc.input.replace('regex:', '').trim(), 'i');
+        passed = pattern.test(code);
+        actualOutput = passed ? 'Estrutura localizada no código' : 'Estrutura ausente';
+      } else {
+        const el = doc.querySelector(tc.input);
+        if (el) {
+          passed = true;
+          actualOutput = `<${el.tagName.toLowerCase()}> presente no documento`;
+        } else {
+          passed = code.toLowerCase().includes(tc.input.toLowerCase());
+          actualOutput = passed ? 'Trecho localizado' : 'Trecho ausente no HTML';
+        }
+      }
+    } catch (err: any) {
+      passed = false;
+      actualOutput = `Erro: ${err.message}`;
+    }
+
+    testResults.push({
+      testId: tc.id,
+      description: tc.description,
+      passed,
+      actualOutput,
+      expectedOutput: tc.expectedOutput,
+      executionTimeMs: Math.round(performance.now() - tStart + 4),
+    });
+  }
+
+  const allPassed = testResults.length > 0 && testResults.every((t) => t.passed);
+  if (allPassed) {
+    stdoutLines.push('✅ Validação do HTML concluída com 100% de conformidade.');
+  }
+
+  return {
+    stdout: stdoutLines.join('\n'),
+    stderr: stderrLines.join('\n'),
+    exitCode: allPassed ? 0 : 1,
+    executionTimeMs: Math.round(performance.now() - startTime),
+    memoryKb: 10400 + Math.floor(Math.random() * 300),
+    testResults,
+    allPassed,
+  };
+}
+
+function executeCssTest(
+  code: string,
+  lesson: Lesson,
+  startTime: number
+): ExecutionResult {
+  const stdoutLines: string[] = [];
+  const stderrLines: string[] = [];
+  const testResults: TestResultItem[] = [];
+
+  stdoutLines.push('[CSS Engine] Analisando regras e seletores CSS3...');
+
+  const cleanCode = code.replace(/\/\*[\s\S]*?\*\//g, '').trim();
+  const ruleBlocks = cleanCode.split('}').filter((r) => r.trim().length > 0);
+  stdoutLines.push(`[CSS AST] ${ruleBlocks.length} blocos de estilo identificados.`);
+
+  for (const tc of lesson.testCases) {
+    const tStart = performance.now();
+    let passed = false;
+    let actualOutput = '';
+
+    try {
+      if (tc.input.startsWith('prop:')) {
+        const parts = tc.input.replace('prop:', '').split('=');
+        const prop = parts[0]?.trim();
+        const val = parts[1]?.trim();
+        if (prop && val) {
+          const propRegex = new RegExp(`${prop}\\s*:\\s*${val.replace(/\s+/g, '\\s*')}`, 'i');
+          passed = propRegex.test(cleanCode);
+          actualOutput = passed ? `${prop}: ${val} configurado` : `${prop}: ${val} ausente`;
+        }
+      } else if (tc.input.startsWith('rule:')) {
+        const match = tc.input.match(/^rule:([^\{]+)\{([a-zA-Z0-9_\-]+)\s*:\s*([^;\}]+)\}/);
+        if (match) {
+          const [, sel, prop, val] = match;
+          const escapedSel = sel.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const ruleRegex = new RegExp(`${escapedSel}[^\\{]*\\{[^\\}]*${prop.trim()}\\s*:\\s*${val.trim()}`, 'i');
+          passed = ruleRegex.test(cleanCode);
+          actualOutput = passed ? `Regra ${sel.trim()} com ${prop.trim()} aplicada` : `Regra ${sel.trim()} não contém ${prop.trim()}`;
+        }
+      } else if (tc.input.startsWith('media:')) {
+        passed = /@media/i.test(cleanCode);
+        actualOutput = passed ? '@media query declarada' : '@media query ausente';
+      } else if (tc.input.startsWith('keyframes:')) {
+        passed = /@keyframes/i.test(cleanCode);
+        actualOutput = passed ? '@keyframes configurado' : '@keyframes ausente';
+      } else if (tc.input.startsWith('regex:')) {
+        const regex = new RegExp(tc.input.replace('regex:', '').trim(), 'i');
+        passed = regex.test(cleanCode);
+        actualOutput = passed ? 'Padrão CSS identificado' : 'Padrão CSS ausente';
+      } else {
+        const pattern = new RegExp(tc.input.replace(/\s+/g, '\\s*'), 'i');
+        passed = pattern.test(cleanCode);
+        actualOutput = passed ? `${tc.input} validado` : `${tc.input} ausente no CSS`;
+      }
+    } catch (err: any) {
+      passed = false;
+      actualOutput = `Erro: ${err.message}`;
+    }
+
+    testResults.push({
+      testId: tc.id,
+      description: tc.description,
+      passed,
+      actualOutput,
+      expectedOutput: tc.expectedOutput,
+      executionTimeMs: Math.round(performance.now() - tStart + 4),
+    });
+  }
+
+  const allPassed = testResults.length > 0 && testResults.every((t) => t.passed);
+  if (allPassed) {
+    stdoutLines.push('✅ Folha de estilo CSS3 validada com sucesso.');
+  }
+
+  return {
+    stdout: stdoutLines.join('\n'),
+    stderr: stderrLines.join('\n'),
+    exitCode: allPassed ? 0 : 1,
+    executionTimeMs: Math.round(performance.now() - startTime),
+    memoryKb: 11500 + Math.floor(Math.random() * 300),
+    testResults,
+    allPassed,
+  };
 }
 
 function executeJavaScriptOrTypeScript(
@@ -52,7 +269,6 @@ function executeJavaScriptOrTypeScript(
   };
 
   try {
-    // Strip simple TS types for runtime evaluation if TypeScript
     let cleanCode = code;
     if (lesson.trackId === 'typescript') {
       cleanCode = cleanCode
@@ -62,23 +278,31 @@ function executeJavaScriptOrTypeScript(
         .replace(/ as [A-Za-z0-9_<>\[\]|]+/g, '');
     }
 
-    // Evaluate student script in a controlled function scope with custom console
+    // Evaluate student script in a function scope
     const runner = new Function('console', `${cleanCode};`);
     runner(mockConsole);
 
-    // Now run test cases
     for (const tc of lesson.testCases) {
       const testStart = performance.now();
       try {
         let testCallCode = '';
-        if (lesson.id === 'js-101') {
-          testCallCode = `return calcularMedia(${tc.input});`;
+
+        if (tc.input.includes('(') || tc.input.includes('.')) {
+          testCallCode = `
+            const __res = (${tc.input});
+            if (typeof __res === 'object' && __res !== null) {
+              return JSON.stringify(__res);
+            }
+            return String(__res);
+          `;
+        } else if (lesson.id === 'js-101') {
+          testCallCode = `return String(calcularMedia(${tc.input}));`;
         } else if (lesson.id === 'js-201') {
           testCallCode = `return JSON.stringify(aplicarDescontoAtivos(${tc.input}));`;
         } else if (lesson.id === 'ts-301') {
           testCallCode = `return JSON.stringify(safeParseJSON(${tc.input}));`;
         } else {
-          testCallCode = `return true;`;
+          testCallCode = `return "true";`;
         }
 
         const testRunner = new Function('console', `${cleanCode}; ${testCallCode}`);
@@ -146,7 +370,6 @@ function executePythonSimulation(
   const stderrLines: string[] = [];
   const testResults: TestResultItem[] = [];
 
-  // Check Python function definition
   const hasDef = /def\s+verificar_aprovacao\s*\(nota,\s*frequencia\):/.test(code);
   const hasIf = /if\s+/.test(code);
   const hasReturn = /return\s+/.test(code);
@@ -157,7 +380,6 @@ function executePythonSimulation(
     stderrLines.push("LogicError: A função precisa retornar um valor com 'return'.");
   }
 
-  // Parse simulated print outputs in code
   const printMatches = code.match(/print\((.*)\)/g);
   if (printMatches) {
     printMatches.forEach((p) => {
@@ -169,7 +391,6 @@ function executePythonSimulation(
     });
   }
 
-  // Test cases evaluation based on code logic detection
   for (const tc of lesson.testCases) {
     const tStart = performance.now();
     let passed = false;
@@ -179,7 +400,6 @@ function executePythonSimulation(
       actual = 'Erro na declaração da função';
       passed = false;
     } else {
-      // Check logical rules presence
       const checksFrequencia = /frequencia\s*<\s*75/.test(code) || /frequencia\s*<=\s*74/.test(code) || /frequencia\s*>=\s*75/.test(code);
       const checksNota7 = /nota\s*>=\s*7/.test(code);
       const checksNota5 = /nota\s*>=\s*5/.test(code) || /5\.0/.test(code);

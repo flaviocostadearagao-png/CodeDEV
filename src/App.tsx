@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TRACKS, SAMPLE_LESSONS, INITIAL_BADGES } from './data/curriculumData';
 import { Track, Lesson, UserStats, DifficultyLevel } from './types';
 import { Header } from './components/Header';
@@ -6,22 +6,102 @@ import { Dashboard } from './components/Dashboard';
 import { LessonIDE } from './components/LessonIDE';
 import { ArchitectureSpecViewer } from './components/ArchitectureSpecViewer';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import {
+  loadBackgroundData,
+  saveUserStats,
+  saveCompletedLessons,
+  saveTracksProgress,
+  saveActiveNavigation,
+  resetAllStoredProgress,
+} from './services/storage';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'ide' | 'architecture'>('dashboard');
   const [tracks, setTracks] = useState<Track[]>(TRACKS);
-  const [activeTrack, setActiveTrack] = useState<Track>(TRACKS[1]); // Default to JavaScript
+  const [activeTrack, setActiveTrack] = useState<Track>(TRACKS[0]); // Default to HTML5 base
   const [lessons, setLessons] = useState<Lesson[]>(SAMPLE_LESSONS);
   const [currentLessonId, setCurrentLessonId] = useState<string>(SAMPLE_LESSONS[0].id);
+  const [saveStatus, setSaveStatus] = useState<'synced' | 'saving'>('synced');
+  const isHydratedRef = useRef(false);
 
   const [userStats, setUserStats] = useState<UserStats>({
-    xp: 420,
-    level: 2,
-    streakDays: 5,
-    completedLessonsCount: 3,
-    totalTimeMinutes: 68,
+    xp: 0,
+    level: 1,
+    streakDays: 0,
+    completedLessonsCount: 0,
+    totalTimeMinutes: 0,
     badges: INITIAL_BADGES,
   });
+
+  // Load background saved progress on mount
+  useEffect(() => {
+    const saved = loadBackgroundData();
+    if (saved.userStats) {
+      setUserStats(saved.userStats);
+    }
+    if (saved.completedLessonIds && saved.completedLessonIds.length > 0) {
+      const completedSet = new Set(saved.completedLessonIds);
+      setLessons((prev) =>
+        prev.map((l) => ({
+          ...l,
+          completed: completedSet.has(l.id),
+        }))
+      );
+    }
+    if (saved.trackProgressMap) {
+      setTracks((prev) =>
+        prev.map((t) => ({
+          ...t,
+          completedLessons: saved.trackProgressMap?.[t.id] ?? t.completedLessons,
+        }))
+      );
+    }
+    if (saved.activeTrackId) {
+      const found = TRACKS.find((t) => t.id === saved.activeTrackId);
+      if (found) setActiveTrack(found);
+    }
+    if (saved.activeLessonId) {
+      const found = SAMPLE_LESSONS.find((l) => l.id === saved.activeLessonId);
+      if (found) setCurrentLessonId(found.id);
+    }
+
+    // Flag that initial load completed
+    setTimeout(() => {
+      isHydratedRef.current = true;
+    }, 100);
+  }, []);
+
+  // Save to background storage whenever state changes
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+
+    setSaveStatus('saving');
+    saveUserStats(userStats);
+    const completedIds = lessons.filter((l) => l.completed).map((l) => l.id);
+    saveCompletedLessons(completedIds);
+    saveTracksProgress(tracks);
+    saveActiveNavigation(activeTrack.id, currentLessonId);
+
+    const timer = setTimeout(() => {
+      setSaveStatus('synced');
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [userStats, lessons, tracks, activeTrack.id, currentLessonId]);
+
+  const handleResetStats = () => {
+    resetAllStoredProgress();
+    setUserStats({
+      xp: 0,
+      level: 1,
+      streakDays: 0,
+      completedLessonsCount: 0,
+      totalTimeMinutes: 0,
+      badges: INITIAL_BADGES.map((b) => ({ ...b, unlockedAt: undefined })),
+    });
+    setLessons((prev) => prev.map((l) => ({ ...l, completed: false })));
+    setTracks((prev) => prev.map((t) => ({ ...t, completedLessons: 0 })));
+  };
 
   const handleSelectTrack = (track: Track) => {
     setActiveTrack(track);
@@ -100,6 +180,7 @@ export default function App() {
         onViewChange={setCurrentView}
         activeTrack={activeTrack}
         userStats={userStats}
+        saveStatus={saveStatus}
       />
 
       {/* Main View Area */}
@@ -113,6 +194,7 @@ export default function App() {
             onSelectTrack={handleSelectTrack}
             onStartLesson={handleStartLesson}
             onOpenArchitecture={() => setCurrentView('architecture')}
+            onResetStats={handleResetStats}
           />
         )}
 

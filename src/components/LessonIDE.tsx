@@ -21,6 +21,11 @@ import {
 import { Lesson, ExecutionResult, Track } from '../types';
 import { CodeEditor } from './CodeEditor';
 import { runCode } from '../services/codeRunner';
+import {
+  getLessonCodeDraft,
+  saveLessonCodeDraft,
+  clearLessonCodeDraft,
+} from '../services/storage';
 
 interface LessonIDEProps {
   lesson: Lesson;
@@ -41,20 +46,28 @@ export const LessonIDE: React.FC<LessonIDEProps> = ({
 }) => {
   const [code, setCode] = useState(lesson.starterCode);
   const [isRunning, setIsRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tests' | 'console'>('tests');
+  const [activeTab, setActiveTab] = useState<'tests' | 'console' | 'preview'>('tests');
   const [mobileTab, setMobileTab] = useState<'guide' | 'editor' | 'tests'>('editor');
   const [showHint, setShowHint] = useState<number | null>(null);
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [hasCompletedCurrent, setHasCompletedCurrent] = useState(!!lesson.completed);
 
-  // Update local code when lesson changes
+  const isWebTrack = lesson.trackId === 'html' || lesson.trackId === 'css';
+
+  // Update local code when lesson changes (loads saved background draft if available)
   useEffect(() => {
-    setCode(lesson.starterCode);
+    const savedDraft = getLessonCodeDraft(lesson.id);
+    setCode(savedDraft !== null ? savedDraft : lesson.starterCode);
     setExecutionResult(null);
     setHasCompletedCurrent(!!lesson.completed);
     setShowHint(null);
     setMobileTab('editor');
   }, [lesson.id]);
+
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
+    saveLessonCodeDraft(lesson.id, newCode);
+  };
 
   const handleRunCode = async () => {
     setIsRunning(true);
@@ -75,6 +88,7 @@ export const LessonIDE: React.FC<LessonIDEProps> = ({
   };
 
   const handleResetCode = () => {
+    clearLessonCodeDraft(lesson.id);
     setCode(lesson.starterCode);
     setExecutionResult(null);
   };
@@ -311,7 +325,7 @@ export const LessonIDE: React.FC<LessonIDEProps> = ({
           <div className="flex-1 min-h-0 flex flex-col">
             <CodeEditor
               code={code}
-              onChange={setCode}
+              onChange={handleCodeChange}
               language={lesson.trackId}
               onReset={handleResetCode}
               onRun={handleRunCode}
@@ -359,6 +373,20 @@ export const LessonIDE: React.FC<LessonIDEProps> = ({
                   <Terminal className="w-3.5 h-3.5" />
                   <span>Console</span>
                 </button>
+
+                {isWebTrack && (
+                  <button
+                    onClick={() => setActiveTab('preview')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+                      activeTab === 'preview'
+                        ? 'bg-slate-800 text-cyan-400 border border-slate-700'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Visualização</span>
+                  </button>
+                )}
               </div>
 
               <button
@@ -497,6 +525,29 @@ export const LessonIDE: React.FC<LessonIDEProps> = ({
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   )}
+                </div>
+              ) : activeTab === 'preview' ? (
+                /* Live HTML/CSS Preview Tab */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                    <span className="flex items-center gap-1.5 font-semibold text-cyan-400">
+                      <Eye className="w-3.5 h-3.5" />
+                      Visualização ao Vivo (Preview)
+                    </span>
+                    <span className="text-[10px] text-slate-500">Renderização Real</span>
+                  </div>
+                  <div className="bg-white rounded-lg p-2 border border-slate-700 min-h-[200px] overflow-hidden">
+                    <iframe
+                      title="mobile-preview"
+                      srcDoc={
+                        lesson.trackId === 'html'
+                          ? code
+                          : `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${code}</style></head><body style="font-family: system-ui, sans-serif; padding: 12px; margin: 0;"><div class="card flex-container grid-dashboard galeria-cards container"><h1 class="titulo">Demonstração Visual</h1><p>Parágrafo estilizado pelo seu código CSS.</p><button class="btn">Botão Teste</button></div></body></html>`
+                      }
+                      className="w-full h-56 border-0"
+                      sandbox="allow-same-origin"
+                    />
+                  </div>
                 </div>
               ) : (
                 /* Console Output Tab */
@@ -713,7 +764,7 @@ export const LessonIDE: React.FC<LessonIDEProps> = ({
         >
           <CodeEditor
             code={code}
-            onChange={setCode}
+            onChange={handleCodeChange}
             language={lesson.trackId}
             onReset={handleResetCode}
             onRun={handleRunCode}
@@ -765,6 +816,21 @@ export const LessonIDE: React.FC<LessonIDEProps> = ({
                 <Terminal className="w-3.5 h-3.5" />
                 <span>Console</span>
               </button>
+
+              {isWebTrack && (
+                <button
+                  id="tab-preview-btn"
+                  onClick={() => setActiveTab('preview')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+                    activeTab === 'preview'
+                      ? 'bg-slate-800 text-cyan-400 border border-slate-700'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Visualização</span>
+                </button>
+              )}
             </div>
 
             {/* Run button */}
@@ -905,6 +971,29 @@ export const LessonIDE: React.FC<LessonIDEProps> = ({
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
+              </div>
+            ) : activeTab === 'preview' ? (
+              /* Live HTML/CSS Preview Tab */
+              <div className="space-y-3 h-full flex flex-col">
+                <div className="flex items-center justify-between text-slate-400 text-xs">
+                  <span className="flex items-center gap-1.5 font-bold text-cyan-400">
+                    <Eye className="w-4 h-4" />
+                    Visualização ao Vivo (Preview)
+                  </span>
+                  <span className="text-[11px] text-slate-500">Renderização Real no Navegador</span>
+                </div>
+                <div className="flex-1 bg-white rounded-xl border border-slate-700 overflow-hidden shadow-inner min-h-[300px]">
+                  <iframe
+                    title="desktop-preview"
+                    srcDoc={
+                      lesson.trackId === 'html'
+                        ? code
+                        : `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${code}</style></head><body style="font-family: system-ui, sans-serif; padding: 20px; margin: 0;"><div class="card flex-container grid-dashboard galeria-cards container"><h1 class="titulo">Demonstração Visual</h1><p>Este parágrafo está sendo renderizado com as propriedades CSS do seu editor.</p><button class="btn">Botão Teste</button></div></body></html>`
+                    }
+                    className="w-full h-full min-h-[320px] border-0"
+                    sandbox="allow-same-origin"
+                  />
+                </div>
               </div>
             ) : (
               /* Console Output Tab */

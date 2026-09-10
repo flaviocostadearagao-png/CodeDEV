@@ -1,5 +1,5 @@
 import React from 'react';
-import { Terminal, Flame, Zap, Award, BookOpen, Layers, FileText } from 'lucide-react';
+import { Terminal, Flame, Zap, Award, BookOpen, Layers, FileText, CheckCircle2, Cloud } from 'lucide-react';
 import { UserStats, Track } from '../types';
 
 interface HeaderProps {
@@ -7,6 +7,7 @@ interface HeaderProps {
   onViewChange: (view: 'dashboard' | 'ide' | 'architecture') => void;
   activeTrack: Track;
   userStats: UserStats;
+  saveStatus?: 'synced' | 'saving';
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -14,6 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   onViewChange,
   activeTrack,
   userStats,
+  saveStatus = 'synced',
 }) => {
   const currentLevelXp = userStats.xp % 500;
   const levelProgress = Math.min(100, Math.round((currentLevelXp / 500) * 100));
@@ -94,6 +96,25 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* User Stats & Active Track Indicator */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          {/* Background Save Indicator */}
+          <div
+            title="Progresso e código salvos em segundo plano continuamente"
+            className="flex items-center gap-1 px-2 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-[11px] font-medium text-slate-300"
+          >
+            {saveStatus === 'saving' ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                <span className="hidden sm:inline text-amber-300">Salvando...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="hidden md:inline text-emerald-400 font-semibold">Salvo em 2º plano</span>
+                <span className="md:hidden text-emerald-400 text-[10px]">Salvo</span>
+              </>
+            )}
+          </div>
+
           {/* Active Track Pill (desktop) */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: activeTrack.accentColor }} />

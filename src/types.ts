@@ -1,4 +1,4 @@
-export type Language = 'python' | 'javascript' | 'typescript' | 'java' | 'csharp';
+export type Language = 'html' | 'css' | 'javascript' | 'typescript' | 'python' | 'java' | 'csharp';
 
 export type DifficultyLevel = 'iniciante' | 'intermediario' | 'avancado';
 
