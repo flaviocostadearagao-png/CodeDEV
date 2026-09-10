@@ -35,35 +35,55 @@ export const ArchitectureSpecViewer: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
       {/* Header Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-slate-800 p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
+      <div className="rounded-xl sm:rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-slate-800 p-4 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 sm:gap-6 shadow-xl">
         <div className="space-y-2 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
             <Cpu className="w-3.5 h-3.5" />
-            <span>Documento Técnico · Arquiteto de Software Sênior EdTech</span>
+            <span>Documento Técnico · Arquiteto de Software Sênior</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+          <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white">
             Especificação Técnica & Arquitetura DevDoZero
           </h1>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            Plano de engenharia para plataforma de ensino de programação escalável para milhares de execuções simultâneas com validação de testes automatizados e isolamento rigoroso.
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Plano de engenharia para plataforma de ensino escalável para milhares de execuções com sandboxes isoladas e validação automatizada.
           </p>
         </div>
 
         <button
           onClick={handleCopyAll}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/25 transition-all cursor-pointer"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/25 transition-all cursor-pointer min-h-[42px]"
         >
           {copied ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
           <span>{copied ? 'Especificação Copiada!' : 'Copiar Especificação em Markdown'}</span>
         </button>
       </div>
 
+      {/* Mobile Section Pill Navigator */}
+      <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        {ARCHITECTURE_SPEC.map((section, idx) => {
+          const isActive = section.id === activeSectionId;
+          return (
+            <button
+              key={section.id}
+              onClick={() => setActiveSectionId(section.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all shrink-0 min-h-[36px] ${
+                isActive
+                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              {idx + 1}. {section.title.split(' ')[0]}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Main Content Layout: Sidebar Menu + Spec Viewer */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Navigation Sidebar (4 cols) */}
-        <div className="lg:col-span-4 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
+        {/* Navigation Sidebar (hidden on mobile to prioritize document content, visible on lg) */}
+        <div className="hidden lg:block lg:col-span-4 space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
             Seções do Documento
           </h3>
@@ -74,7 +94,7 @@ export const ArchitectureSpecViewer: React.FC = () => {
                 <button
                   key={section.id}
                   onClick={() => setActiveSectionId(section.id)}
-                  className={`w-full text-left p-4 rounded-xl border transition-all text-xs flex items-start gap-3 group ${
+                  className={`w-full text-left p-4 rounded-xl border transition-all text-xs flex items-start gap-3 group cursor-pointer ${
                     isActive
                       ? 'bg-slate-900 border-indigo-500 ring-2 ring-indigo-500/20 text-white shadow-md'
                       : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-300'
@@ -129,8 +149,8 @@ export const ArchitectureSpecViewer: React.FC = () => {
           </div>
         </div>
 
-        {/* Detail Panel (8 cols) */}
-        <div className="lg:col-span-8 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+        {/* Detail Panel (8 cols on desktop, full width on mobile) */}
+        <div className="lg:col-span-8 bg-slate-900/90 border border-slate-800 rounded-xl sm:rounded-2xl p-4 sm:p-8 space-y-5 sm:space-y-6">
           {/* Section Header */}
           <div className="border-b border-slate-800 pb-5 space-y-2">
             <span className="text-xs uppercase font-bold text-cyan-400 tracking-wider">

@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { LessonIDE } from './components/LessonIDE';
 import { ArchitectureSpecViewer } from './components/ArchitectureSpecViewer';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'ide' | 'architecture'>('dashboard');
@@ -102,7 +103,7 @@ export default function App() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1">
+      <main className={`flex-1 ${currentView !== 'ide' ? 'pb-20 md:pb-0' : ''}`}>
         {currentView === 'dashboard' && (
           <Dashboard
             tracks={tracks}
@@ -128,6 +129,14 @@ export default function App() {
 
         {currentView === 'architecture' && <ArchitectureSpecViewer />}
       </main>
+
+      {/* Mobile Bottom Navigation (Shown on dashboard & architecture views) */}
+      {currentView !== 'ide' && (
+        <MobileBottomNav
+          currentView={currentView}
+          onViewChange={setCurrentView}
+        />
+      )}
     </div>
   );
 }
